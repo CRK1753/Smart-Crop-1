@@ -52,12 +52,10 @@ body{background:var(--dim-green);padding-bottom:70px;font-family:system-ui,sans-
 <body>
 <!-- ===== Top Action Buttons ===== -->
 <div class="d-flex justify-content-between align-items-center px-3 mt-2">
-  <!-- Schemes Button -->
   <button class="btn btn-outline-success btn-sm" id="schemeBtn">
     <i class="bi bi-card-checklist"></i> Schemes
   </button>
 
-  <!-- Language Dropdown -->
   <div class="dropdown">
     <button class="btn btn-outline-success btn-sm dropdown-toggle" id="langBtn"
             data-bs-toggle="dropdown" aria-expanded="false">
@@ -70,7 +68,6 @@ body{background:var(--dim-green);padding-bottom:70px;font-family:system-ui,sans-
     </ul>
   </div>
 </div>
-
 
 <!-- Weather -->
 <div class="weather-card text-center">
@@ -85,7 +82,7 @@ body{background:var(--dim-green);padding-bottom:70px;font-family:system-ui,sans-
   <div class="news-title">🌾 Agriculture Updates</div>
   <div id="newsCarousel" class="carousel slide news-carousel" data-bs-ride="carousel">
     <div class="carousel-inner" id="newsInner">
-      <div class="carousel-item active text-center"><em>Fetching news…</em></div>
+
     </div>
   </div>
 </div>
@@ -113,8 +110,8 @@ body{background:var(--dim-green);padding-bottom:70px;font-family:system-ui,sans-
   <a href="profile.html" class="nav-item text-white text-decoration-none text-center">
     <div><i class="bi bi-person-circle"></i></div><small>Profile</small></a>
 </div>
+
 <!-- Schemes Modal -->
-<!-- ✅ FULLSCREEN SCHEMES MODAL -->
 <div class="modal fade" id="schemeModal" tabindex="-1">
   <div class="modal-dialog modal-fullscreen">
     <div class="modal-content">
@@ -134,7 +131,6 @@ body{background:var(--dim-green);padding-bottom:70px;font-family:system-ui,sans-
     </div>
   </div>
 </div>
-
 
 <!-- Add Crop Modal -->
 <div class="modal fade" id="addModal" tabindex="-1">
@@ -287,12 +283,11 @@ imageInput.onchange = e => {
     const crops = loadCrops();
     crops[currentIndex].images.push({
       src: ev.target.result,
-      date: new Date().toLocaleDateString(),  // ✅ store date here
-      pred: "Healthy Crop"                    // ✅ store prediction/note
+      date: new Date().toLocaleDateString(),
+      pred: "Healthy Crop"
     });
     saveCrops(crops);
 
-    // update UI
     const d = document.createElement('div');
     d.className = 'col-6';
     d.innerHTML = `<img src="${ev.target.result}"><small class="text-muted d-block mt-1">Healthy Crop</small>`;
@@ -300,7 +295,6 @@ imageInput.onchange = e => {
   };
   r.readAsDataURL(f);
 };
-
 
 deleteCropBtn.onclick=()=>{
   if(confirm("Delete this crop?")){
@@ -317,67 +311,35 @@ downloadPdfBtn.onclick = () => {
   const c = loadCrops()[currentIndex];
   const doc = new jsPDF();
   let y = 20;
-
-  // ---- Title ----
   doc.setFontSize(16);
   doc.text("Crop Progress Report", 20, y);
   y += 15;
-
-  // ---- Crop Details ----
   doc.setFontSize(12);
   doc.text(`Name: ${c.name}`, 20, y); y += 10;
   doc.text(`Planted on: ${c.plantDate}`, 20, y); y += 10;
-  if (c.notes) {
-    doc.text(`General Notes: ${c.notes}`, 20, y, { maxWidth: 170 });
-    y += 15;
-  }
-
-  // ---- Day-by-Day Notes & Images ----
+  if (c.notes) { doc.text(`General Notes: ${c.notes}`, 20, y, { maxWidth: 170 }); y += 15; }
   if (c.dailyNotes && c.dailyNotes.length) {
-    doc.setFontSize(13);
-    doc.text("Daily Progress Details:", 20, y);
-    y += 10;
-    doc.setFontSize(12);
-
+    doc.setFontSize(13); doc.text("Daily Progress Details:", 20, y); y += 10; doc.setFontSize(12);
     const startDate = new Date(c.plantDate);
-
     c.dailyNotes.forEach((note, i) => {
       const dayDate = new Date(startDate.getTime() + i * 86400000);
       const dateStr = dayDate.toLocaleDateString();
-
-      // Get images for this day
       const dayImages = (c.images || []).filter(img => img.date === dateStr);
       if (!note && !dayImages.length) return;
-
       if (y > 270) { doc.addPage(); y = 20; }
-
-      // Day header
       const dayTitle = `Day ${i + 1} (${dateStr}): ${note || "No note"}`;
-      doc.text(dayTitle, 20, y, { maxWidth: 170 });
-      y += 10;
-
-      // Images for the day
+      doc.text(dayTitle, 20, y, { maxWidth: 170 }); y += 10;
       dayImages.forEach((img, k) => {
         if (y > 200) { doc.addPage(); y = 20; }
-        try {
-          doc.addImage(img.src, "JPEG", 25, y, 45, 35);
-        } catch (err) {
-          console.error("Image add failed:", err);
-        }
+        try { doc.addImage(img.src, "JPEG", 25, y, 45, 35); } catch (err) { console.error(err); }
         const predMsg = img.pred || img.note || "Healthy Crop";
-        doc.text(`Image ${k + 1} – ${predMsg}`, 75, y + 20, { maxWidth: 110 });
-        y += 45;
+        doc.text(`Image ${k + 1} – ${predMsg}`, 75, y + 20, { maxWidth: 110 }); y += 45;
       });
-
-      y += 5; // space after each day
+      y += 5;
     });
   }
-
-  // ---- Save PDF ----
   doc.save(`${c.name}_progress.pdf`);
 };
-
-
 
 renderCropList();
 
@@ -394,51 +356,54 @@ if(navigator.geolocation){
   },()=>weatherCond.textContent="Location denied");
 }else weatherCond.textContent="No geolocation";
 
-// News
-fetch('https://newsdata.io/api/1/news?apikey=pub_87f3b1441df044a0b4de79e2c85fa3ea&language=en&q=agriculture')
-  .then(response => {
-    if (!response.ok) throw new Error('HTTP error! Status: ' + response.status);
-    return response.json();
-  })
-  .then(data => {
-    console.log(data); // Check articles in console
-    const inner = document.getElementById('newsInner');
-    inner.innerHTML = '';
-    (data.results || []).slice(0, 5).forEach((article, i) => {
-      const img = article.image_url ? `<img src="${article.image_url}" class="news-img" alt="news">` : '';
-      const div = document.createElement('div');
-      div.className = 'carousel-item' + (i === 0 ? ' active' : '');
-      div.innerHTML = `${img}<strong>${article.title}</strong><br><small>${article.source_id || ''}</small>`;
-      inner.appendChild(div);
-    });
-  })
-  .catch(err => {
-    console.error('Fetch error:', err);
-    document.getElementById('newsInner').innerHTML = '<div class="carousel-item active">News unavailable</div>';
-  });
+// ===== Static Agriculture News =====
 
+// ===== Static Agriculture News =====
+const newsInner = document.getElementById('newsInner');
 
-// === Schemes Modal ===
-document.getElementById('schemeBtn').onclick = () => {
-  new bootstrap.Modal('#schemeModal').show();
-};
+const sampleNews = [
+  {title: "Organic Farming Gains Popularity in Rural Areas", image: "https://picsum.photos/id/1059/600/400", source: "AgriTimes"},
+  {title: "Government Launches New Subsidy for Wheat Farmers", image: "https://picsum.photos/id/1043/600/400", source: "FarmNews"},
+  {title: "AI Solutions Helping Farmers Predict Crop Diseases", image: "https://picsum.photos/id/1039/600/400", source: "AgriTech Journal"},
+  {title: "Water-Saving Techniques Increase Rice Yields", image: "https://picsum.photos/id/1049/600/400", source: "GreenFarming"},
+  {title: "Farmers Adopt Smart Irrigation Systems", image: "https://picsum.photos/id/1052/600/400", source: "AgriWorld"},
+  {title: "New Crop Insurance Policy Launched", image: "https://picsum.photos/id/1055/600/400", source: "FarmPolicy"},
+  {title: "Urban Agriculture on the Rise", image: "https://picsum.photos/id/1060/600/400", source: "UrbanFarms"},
+  {title: "Soil Health Cards Help Farmers Increase Yield", image: "https://picsum.photos/id/1062/600/400", source: "AgriNews"}
+];
 
-// === Language Switch (basic demo) ===
-// You can expand this with real translations.
+sampleNews.forEach((article,i)=>{
+  const div = document.createElement('div');
+  div.className = 'carousel-item' + (i===0?' active':'');
+  div.innerHTML = `
+    <img src="${article.image}" class="news-img" alt="news">
+    <strong>${article.title}</strong><br><small>${article.source}</small>
+  `;
+  newsInner.appendChild(div);
+});
+
+// Auto-slide every 4 seconds
+new bootstrap.Carousel(document.getElementById('newsCarousel'), {
+  interval: 4000,
+  ride: 'carousel',
+  touch: true,
+  wrap: true
+});
+
+// === Schemes Modal Button ===
+document.getElementById('schemeBtn').onclick = () => new bootstrap.Modal('#schemeModal').show();
+
+// === Language Switch ===
 document.querySelectorAll('.lang-select').forEach(item=>{
   item.addEventListener('click',()=>{
     const code=item.dataset.lang;
     const label=item.textContent;
     document.getElementById('langBtn').innerHTML = "🌐 " + label;
     localStorage.setItem('sca_lang',code);
-    alert("Language switched to: " + label + 
-          "\n(For full translation you can map text in JS).");
+    alert("Language switched to: " + label + "\n(For full translation map text in JS).");
   });
 });
 
-
-
-// Optional: Restore last chosen language on page load
 const savedLang = localStorage.getItem('sca_lang');
 if(savedLang){
   const match = document.querySelector(`.lang-select[data-lang="${savedLang}"]`);
@@ -448,5 +413,3 @@ if(savedLang){
 </script>
 </body>
 </html>
-
-
