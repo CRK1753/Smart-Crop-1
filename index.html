@@ -395,7 +395,7 @@ if(navigator.geolocation){
 }else weatherCond.textContent="No geolocation";
 
 // News
-fetch('https://gnews.io/api/v4/top-headlines?topic=nation&lang=en&token=6111a32f3f7df44274be299996f3c1bf')
+fetch('https://newsdata.io/api/1/news?apikey=pub_87f3b1441df044a0b4de79e2c85fa3ea=en')
   .then(response => response.json())
   .then(data => {
     const inner = document.getElementById('newsInner');
@@ -443,3 +443,4 @@ if(savedLang){
 </script>
 </body>
 </html>
+
