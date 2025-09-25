@@ -395,23 +395,28 @@ if(navigator.geolocation){
 }else weatherCond.textContent="No geolocation";
 
 // News
-fetch('https://newsdata.io/api/1/news?apikey=pub_87f3b1441df044a0b4de79e2c85fa3ea=en')
-  .then(response => response.json())
+fetch('https://newsdata.io/api/1/news?apikey=pub_87f3b1441df044a0b4de79e2c85fa3ea&language=en&q=agriculture')
+  .then(response => {
+    if (!response.ok) throw new Error('HTTP error! Status: ' + response.status);
+    return response.json();
+  })
   .then(data => {
+    console.log(data); // Check articles in console
     const inner = document.getElementById('newsInner');
     inner.innerHTML = '';
-    (data.articles || []).slice(0, 5).forEach((article, i) => {
-      const img = article.image ? `<img src="${article.image}" class="news-img" alt="news">` : '';
+    (data.results || []).slice(0, 5).forEach((article, i) => {
+      const img = article.image_url ? `<img src="${article.image_url}" class="news-img" alt="news">` : '';
       const div = document.createElement('div');
       div.className = 'carousel-item' + (i === 0 ? ' active' : '');
-      div.innerHTML = `${img}<strong>${article.title}</strong><br><small>${article.source?.name || ''}</small>`;
+      div.innerHTML = `${img}<strong>${article.title}</strong><br><small>${article.source_id || ''}</small>`;
       inner.appendChild(div);
     });
   })
-  .catch(() => {
-    const inner = document.getElementById('newsInner');
-    inner.innerHTML = '<div class="carousel-item active">News unavailable</div>';
+  .catch(err => {
+    console.error('Fetch error:', err);
+    document.getElementById('newsInner').innerHTML = '<div class="carousel-item active">News unavailable</div>';
   });
+
 
 // === Schemes Modal ===
 document.getElementById('schemeBtn').onclick = () => {
@@ -443,4 +448,5 @@ if(savedLang){
 </script>
 </body>
 </html>
+
 
