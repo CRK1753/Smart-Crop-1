@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Plant Search</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root { --green:#2f8f4a; }
+
+body{
+  background:#e6f3ea;
+  padding-bottom:120px;
+  font-family:system-ui,sans-serif;
+}
+
+/* HEADER */
+.header{
+  position:fixed; top:0; left:0; right:0;
+  background:#e6f3ea;
+  display:flex; align-items:center;
+  justify-content:space-between;
+  padding:10px 16px;
+  z-index:1000;
+}
+.header a{color:#000; font-size:20px; text-decoration:none;}
+#historyBtn{font-size:20px; cursor:pointer;}
+
+/* History Panel */
+#historyPanel{
+  position:fixed; top:50px; left:0; right:0; bottom:0;
+  background:#fff;
+  overflow:auto;
+  border-top:1px solid #ccc;
+  display:none;
+  padding:10px;
+  z-index:999;
+}
+#historyPanel div{
+  padding:6px 0;
+  border-bottom:1px dashed #ddd;
+  font-size:14px;
+}
+
+/* Messages */
+.output-area{
+  margin-top:60px;
+  padding:16px;
+}
+.message{
+  background:#fff;
+  border-radius:12px;
+  padding:12px 16px;
+  margin-bottom:12px;
+  max-width:85%;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+  font-size:15px;
+  white-space:pre-line;
+}
+.message.user{margin-left:auto;background:var(--green);color:#fff;}
+.message img{
+  max-width:100%;
+  border-radius:8px;
+  margin-top:6px;
+}
+
+/* Input Container */
+.chat-input-container{
+  position:fixed; bottom:0; left:0; right:0;
+  background:#2f8f4a;
+  padding:10px 12px;
+  display:flex; align-items:flex-end;
+  gap:10px;
+}
+textarea{
+  flex:1;
+  resize:none;
+  border:none;
+  outline:none;
+  border-radius:20px;
+  padding:10px 14px;
+  font-size:15px;
+  max-height:120px;
+}
+.icon-btn{
+  background:none;
+  border:none;
+  color:#fff;
+  font-size:22px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.send-btn{
+  background:#1e6d34;
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  width:44px;
+  height:44px;
+  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* + Menu */
+.plus-menu{
+  position:absolute;
+  bottom:70px;
+  left:16px;
+  background:#fff;
+  border-radius:12px;
+  padding:8px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  display:none;
+  flex-direction:column;
+  gap:8px;
+}
+.plus-menu button{
+  background:none;
+  border:none;
+  text-align:left;
+  color:#333;
+  font-size:15px;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <a href="javascript:void(0);" id="backBtn"><i class="bi bi-arrow-left"></i></a>
+  <i class="bi bi-clock-history" id="historyBtn"></i>
+</div>
+
+<!-- History Panel -->
+<div id="historyPanel"></div>
+
+<!-- Chat Output -->
+<div id="output" class="output-area"></div>
+
+<!-- Input -->
+<div class="chat-input-container">
+  <button class="icon-btn" id="plusBtn"><i class="bi bi-plus-circle"></i></button>
+  <textarea id="queryInput" rows="1" placeholder="Ask anything..."></textarea>
+  <button class="icon-btn" id="voiceBtn"><i class="bi bi-mic"></i></button>
+  <button class="send-btn" id="sendBtn"><i class="bi bi-send-fill"></i></button>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" accept="image/*" capture="environment" id="cameraInput" style="display:none">
+<input type="file" accept="image/*" id="photoInput" style="display:none">
+<input type="file" id="fileInput" style="display:none">
+
+<!-- Plus Menu -->
+<div class="plus-menu" id="plusMenu">
+  <button id="cameraMenu"><i class="bi bi-camera"></i> Camera</button>
+  <button id="photoMenu"><i class="bi bi-image"></i> Photos</button>
+  <button id="fileMenu"><i class="bi bi-paperclip"></i> Files</button>
+</div>
+
+<script>
+const output = document.getElementById('output');
+const input = document.getElementById('queryInput');
+const sendBtn = document.getElementById('sendBtn');
+const plusBtn = document.getElementById('plusBtn');
+const plusMenu = document.getElementById('plusMenu');
+const historyPanel = document.getElementById('historyPanel');
+const historyBtn = document.getElementById('historyBtn');
+const backBtn = document.getElementById('backBtn');
+
+let chatHistory = JSON.parse(localStorage.getItem('plant_chat_history')||'[]');
+
+const mockResponses = {
+  "hi":"Hello! How can I help you with your plants today?",
+  "hello":"Hi there! I'm here to help with any plant-related queries.",
+  "thanks":"You're welcome! Happy gardening!",
+  "default":"I'm not sure about that. Can you try asking differently?"
+};
+
+function renderHistory(){
+  historyPanel.innerHTML = chatHistory.map(m=>`<div>${m.sender==='user'?'You':'Bot'}: ${m.text}</div>`).join('');
+}
+renderHistory();
+
+function addMessage(text, sender='user', imgSrc=null){
+  const msg = document.createElement('div');
+  msg.className = 'message ' + (sender==='user' ? 'user' : '');
+  msg.innerHTML = imgSrc ? `${text}<br><img src="${imgSrc}">` : text;
+  output.appendChild(msg);
+  output.scrollTop = output.scrollHeight;
+  chatHistory.push({sender,text});
+  localStorage.setItem('plant_chat_history', JSON.stringify(chatHistory));
+}
+
+// send button
+sendBtn.onclick = () => handleSend();
+
+input.addEventListener('keydown', e=>{
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+input.addEventListener('input', ()=>{
+  input.style.height='auto';
+  input.style.height = Math.min(input.scrollHeight,120)+'px';
+});
+
+// Plus menu toggle
+plusBtn.onclick = ()=> plusMenu.style.display = plusMenu.style.display==='flex'?'none':'flex';
+document.body.addEventListener('click', e=>{
+  if(!plusBtn.contains(e.target) && !plusMenu.contains(e.target)) plusMenu.style.display='none';
+});
+
+// History toggle
+historyBtn.onclick = ()=> historyPanel.style.display = historyPanel.style.display==='block'?'none':'block';
+
+// Back button
+backBtn.onclick = ()=> history.length > 1 ? history.back() : alert("No previous page");
+
+// File actions
+document.getElementById('cameraMenu').onclick = ()=> cameraInput.click();
+document.getElementById('photoMenu').onclick = ()=> photoInput.click();
+document.getElementById('fileMenu').onclick  = ()=> fileInput.click();
+
+cameraInput.onchange = e=> handleImageUpload(e.target.files[0]);
+photoInput.onchange  = e=> handleImageUpload(e.target.files[0]);
+fileInput.onchange   = e=> handleImageUpload(e.target.files[0]);
+
+// Voice assistant
+const voiceBtn = document.getElementById('voiceBtn');
+let recognition;
+if('webkitSpeechRecognition' in window){
+  recognition = new webkitSpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-IN';
+  recognition.onresult = (e)=>{
+    const text = e.results[0][0].transcript;
+    addMessage('🎤 '+text,'user');
+    handleSend(text);
+  };
+}
+voiceBtn.onclick = ()=> recognition ? recognition.start() : alert("Speech not supported");
+
+// Handle text send
+function handleSend(overrideText){
+  const query = overrideText ? overrideText : input.value.trim();
+  if(!query) return;
+  addMessage(query,'user');
+  if(!overrideText) input.value = '';
+  input.style.height='auto';
+
+  const reply = mockResponses[query.toLowerCase()] || mockResponses['default'];
+  setTimeout(()=> addMessage(reply,'bot'), 500);
+}
+
+// ✅ Image Upload & Prediction
+function handleImageUpload(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const imgSrc = e.target.result;
+    // Show user image
+    addMessage("🖼️ Uploaded Image:",'user', imgSrc);
+
+    // Fake prediction
+    const predictions = [
+      "Healthy Plant 🌱",
+      "Slight nutrient deficiency ⚠️",
+      "Possible fungal infection ⚠️",
+      "Needs more sunlight ☀️",
+      "Healthy and thriving 🌿"
+    ];
+    const randomPred = predictions[Math.floor(Math.random()*predictions.length)];
+    setTimeout(()=> addMessage("Prediction: " + randomPred,'bot'), 800);
+  };
+  reader.readAsDataURL(file);
+}
+</script>
+</body>
+</html>

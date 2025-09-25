@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Small Crop Advisory</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+const user = JSON.parse(localStorage.getItem('user') || 'null');
+if (!user) window.location.href = "signup.html";
+</script>
+
+<style>
+:root{
+  --dim-green:#e6f3ea;
+  --accent-green:#2f8f4a;
+  --card-grad:linear-gradient(180deg,#ffffffee,#f1fff6cc);
+}
+body{background:var(--dim-green);padding-bottom:70px;font-family:system-ui,sans-serif;}
+.weather-card,.news-card{
+  width:90%;margin:12px auto;padding:18px;
+  background:var(--card-grad);
+  border-radius:16px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+.news-title{font-size:16px;font-weight:600;color:#2c6b39;margin-bottom:6px;}
+.news-img{width:100%;max-height:160px;object-fit:cover;border-radius:12px;margin-bottom:8px;}
+#welcomeCard{margin:12px 16px;padding:20px;border-radius:14px;text-align:center;}
+.crop-bar{margin:10px 16px;padding:12px;border-radius:12px;background:#ffffffcc;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);display:flex;align-items:center;gap:12px;cursor:pointer;}
+.crop-thumb{width:56px;height:56px;border-radius:10px;background:#f0f0f0;display:flex;
+  align-items:center;justify-content:center;font-weight:600;color:#666;}
+.fab-add{position:fixed;left:85%;bottom:76px;transform:translateX(-50%);
+  width:56px;height:56px;border-radius:50%;background:var(--accent-green);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.2);border:4px solid #ffffffaa;z-index:1030;}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;height:50px;background:var(--accent-green);
+  display:flex;align-items:center;justify-content:space-around;color:white;z-index:1020;
+  border-top-left-radius:12px;border-top-right-radius:12px;}
+.bottom-nav .nav-item .bi{font-size:15px}
+.growth-track{display:wrap;overflow-x:auto;gap:10px;padding:8px 0}
+.growth-day{min-width:120px;background:#fff;border-radius:8px;padding:8px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.05);flex-shrink:0;text-align:left}
+.growth-note{font-size:12px;color:#555;margin-top:4px}
+.crop-image-grid img{width:100%;border-radius:8px}
+</style>
+</head>
+<body>
+<!-- ===== Top Action Buttons ===== -->
+<div class="d-flex justify-content-between align-items-center px-3 mt-2">
+  <!-- Schemes Button -->
+  <button class="btn btn-outline-success btn-sm" id="schemeBtn">
+    <i class="bi bi-card-checklist"></i> Schemes
+  </button>
+
+  <!-- Language Dropdown -->
+  <div class="dropdown">
+    <button class="btn btn-outline-success btn-sm dropdown-toggle" id="langBtn"
+            data-bs-toggle="dropdown" aria-expanded="false">
+      🌐 English
+    </button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item lang-select" data-lang="en">English</a></li>
+      <li><a class="dropdown-item lang-select" data-lang="pa">ਪੰਜਾਬੀ (Punjabi)</a></li>
+      <li><a class="dropdown-item lang-select" data-lang="ta">தமிழ் (Tamil)</a></li>
+    </ul>
+  </div>
+</div>
+
+
+<!-- Weather -->
+<div class="weather-card text-center">
+  <div style="font-size:14px;font-weight:600">Weather</div>
+  <div id="weatherTemp" style="font-size:22px;margin-top:6px">-- °C</div>
+  <div id="weatherCond" style="font-size:13px;color:#4b4b4b">Loading...</div>
+  <small id="weatherLoc" style="display:block;margin-top:8px;color:#2c6b39;font-weight:600">Location</small>
+</div>
+
+<!-- News -->
+<div class="news-card">
+  <div class="news-title">🌾 Agriculture Updates</div>
+  <div id="newsCarousel" class="carousel slide news-carousel" data-bs-ride="carousel">
+    <div class="carousel-inner" id="newsInner">
+      <div class="carousel-item active text-center"><em>Fetching news…</em></div>
+    </div>
+  </div>
+</div>
+
+<!-- Welcome -->
+<div id="welcomeCard">
+  <h5>Welcome to Smart Crop Advisory</h5>
+  <p class="small text-muted mb-0">Tap the + button to add your first crop and start monitoring growth.</p>
+</div>
+
+<!-- Crop List -->
+<div id="cropList"></div>
+
+<!-- Add Button -->
+<button class="fab-add" id="addCropBtn"><i class="bi bi-plus-lg"></i></button>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+  <a href="index.html" class="nav-item text-white text-decoration-none text-center">
+    <div><i class="bi bi-house-door-fill"></i></div><small>Home</small></a>
+  <a href="search.html" class="nav-item text-white text-decoration-none text-center">
+    <div><i class="bi bi-search"></i></div><small>Search</small></a>
+  <a href="community.html" class="nav-item text-white text-decoration-none text-center">
+    <div><i class="bi bi-people-fill"></i></div><small>Community</small></a>
+  <a href="profile.html" class="nav-item text-white text-decoration-none text-center">
+    <div><i class="bi bi-person-circle"></i></div><small>Profile</small></a>
+</div>
+<!-- Schemes Modal -->
+<!-- ✅ FULLSCREEN SCHEMES MODAL -->
+<div class="modal fade" id="schemeModal" tabindex="-1">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Farmer Schemes</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small">
+        <ul>
+          <li><b>PM-KISAN:</b> ₹6,000 yearly direct benefit to farmers.</li>
+          <li><b>Pradhan Mantri Fasal Bima Yojana:</b> Crop insurance with low premium.</li>
+          <li><b>Kisan Credit Card:</b> Short-term credit for seeds, fertilizers.</li>
+          <li><b>Punjab Mera Pani Meri Virasat:</b> Incentives for water-saving crops.</li>
+          <li><b>Punjab State Crop Diversification:</b> Subsidy for maize, pulses, etc.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Add Crop Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">Add Crop</h5></div>
+      <div class="modal-body">
+        <form id="addCropForm">
+          <input class="form-control mb-2" id="inputCropName" placeholder="Crop name" required>
+          <input type="date" class="form-control mb-2" id="inputPlantDate" required>
+          <input class="form-control mb-2" id="inputLandSize" placeholder="Size of land (e.g. 2 acres)" required>
+          <input class="form-control mb-2" id="inputLandType" placeholder="Type of land" required>
+          <select class="form-select mb-2" id="inputIrrigation" required>
+            <option value="">Irrigation Facility?</option>
+            <option>None</option><option>Periodic</option><option>Low Consumption</option>
+          </select>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-success" id="saveCropBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Crop Details Modal -->
+<div class="modal fade" id="cropModal" tabindex="-1">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Crop Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <strong id="modalCropName">-</strong>
+        <p class="small text-muted" id="modalCropStart">Started: -</p>
+        <div class="mb-1"><b>Land Size:</b> <span id="modalLandSize">-</span></div>
+        <div class="mb-1"><b>Land Type:</b> <span id="modalLandType">-</span></div>
+        <div class="mb-3"><b>Irrigation:</b> <span id="modalIrrigation">-</span></div>
+
+        <label class="form-label">Images</label>
+        <div class="row g-2 crop-image-grid" id="imageGrid"></div>
+        <div class="mt-2">
+          <label class="btn btn-outline-success btn-sm mb-0">
+            <i class="bi bi-camera"></i> Capture / Upload
+            <input type="file" accept="image/*" id="imageInput" style="display:none">
+          </label>
+        </div>
+
+        <hr>
+        <h6>Daily Growth Tracker</h6>
+        <div id="calendar" class="growth-track mt-2"></div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <button class="btn btn-danger" id="deleteCropBtn"><i class="bi bi-trash"></i> Delete</button>
+        <button class="btn btn-success" id="downloadPdfBtn"><i class="bi bi-download"></i> Download PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const cropKey='scas_crops_v4'; let currentIndex=-1;
+
+function loadCrops(){return JSON.parse(localStorage.getItem(cropKey)||'[]');}
+function saveCrops(c){localStorage.setItem(cropKey,JSON.stringify(c));}
+function addCrop(c){const a=loadCrops();a.push(c);saveCrops(a);}
+
+function renderCropList(){
+  const list=document.getElementById('cropList'), welcome=document.getElementById('welcomeCard');
+  const crops=loadCrops(); list.innerHTML=''; welcome.style.display=crops.length?'none':'block';
+  crops.forEach((c,i)=>{
+    const days=Math.floor((Date.now()-new Date(c.plantDate))/86400000);
+    const div=document.createElement('div');
+    div.className='crop-bar';
+    div.innerHTML=`<div class="crop-thumb">${c.name.slice(0,2).toUpperCase()}</div>
+      <div style="flex:1"><div style="font-weight:700">${c.name}</div>
+      <div style="font-size:13px;color:#4a4a4a">${days} day(s) since planting</div></div>`;
+    div.onclick=()=>openCropModal(i);
+    list.appendChild(div);
+  });
+}
+
+function openCropModal(idx){
+  currentIndex=idx;
+  const c=loadCrops()[idx];
+  modalCropName.textContent=c.name;
+  modalCropStart.textContent=`Started: ${c.plantDate}`;
+  modalLandSize.textContent=c.landSize;
+  modalLandType.textContent=c.landType;
+  modalIrrigation.textContent=c.irrigation;
+  imageGrid.innerHTML='';
+  (c.images||[]).forEach(img=>{
+    const d=document.createElement('div');
+    d.className='col-6';
+    d.innerHTML=`<img src="${img.src}"><small class="text-muted d-block mt-1">${img.note||''}</small>`;
+    imageGrid.appendChild(d);
+  });
+  renderCalendar(c);
+  new bootstrap.Modal('#cropModal').show();
+}
+
+function renderCalendar(c){
+  calendar.innerHTML='';
+  const start=new Date(c.plantDate);
+  const days=Math.max(30,Math.floor((Date.now()-start)/86400000)+1);
+  for(let i=0;i<days;i++){
+    const d=new Date(start.getTime()+i*86400000);
+    const cell=document.createElement('div');
+    cell.className='growth-day';
+    const note=c.dailyNotes?.[i]||'';
+    cell.innerHTML=`<div style="font-weight:600">Day ${i+1}</div>
+      <small>${d.toLocaleDateString()}</small>
+      <textarea class="form-control form-control-sm mt-1" placeholder="Note" 
+        oninput="saveDayNote(${i},this.value)">${note}</textarea>`;
+    calendar.appendChild(cell);
+  }
+}
+
+function saveDayNote(dayIdx,text){
+  const crops=loadCrops();
+  if(!crops[currentIndex].dailyNotes) crops[currentIndex].dailyNotes=[];
+  crops[currentIndex].dailyNotes[dayIdx]=text;
+  saveCrops(crops);
+}
+
+addCropBtn.onclick=()=>new bootstrap.Modal('#addModal').show();
+saveCropBtn.onclick=e=>{
+  e.preventDefault();
+  const name=inputCropName.value.trim();
+  const date=inputPlantDate.value;
+  const size=inputLandSize.value.trim();
+  const type=inputLandType.value.trim();
+  const irr=inputIrrigation.value;
+  if(!name||!date||!size||!type||!irr) return alert('Please fill all fields');
+  addCrop({name,plantDate:date,landSize:size,landType:type,irrigation:irr,images:[],dailyNotes:[]});
+  bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+  document.getElementById('addCropForm').reset();
+  renderCropList();
+};
+
+imageInput.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+
+  const r = new FileReader();
+  r.onload = ev => {
+    const crops = loadCrops();
+    crops[currentIndex].images.push({
+      src: ev.target.result,
+      date: new Date().toLocaleDateString(),  // ✅ store date here
+      pred: "Healthy Crop"                    // ✅ store prediction/note
+    });
+    saveCrops(crops);
+
+    // update UI
+    const d = document.createElement('div');
+    d.className = 'col-6';
+    d.innerHTML = `<img src="${ev.target.result}"><small class="text-muted d-block mt-1">Healthy Crop</small>`;
+    imageGrid.appendChild(d);
+  };
+  r.readAsDataURL(f);
+};
+
+
+deleteCropBtn.onclick=()=>{
+  if(confirm("Delete this crop?")){
+    const crops=loadCrops();
+    crops.splice(currentIndex,1);
+    saveCrops(crops);
+    bootstrap.Modal.getInstance(document.getElementById('cropModal')).hide();
+    renderCropList();
+  }
+};
+
+downloadPdfBtn.onclick = () => {
+  const { jsPDF } = window.jspdf;
+  const c = loadCrops()[currentIndex];
+  const doc = new jsPDF();
+  let y = 20;
+
+  // ---- Title ----
+  doc.setFontSize(16);
+  doc.text("Crop Progress Report", 20, y);
+  y += 15;
+
+  // ---- Crop Details ----
+  doc.setFontSize(12);
+  doc.text(`Name: ${c.name}`, 20, y); y += 10;
+  doc.text(`Planted on: ${c.plantDate}`, 20, y); y += 10;
+  if (c.notes) {
+    doc.text(`General Notes: ${c.notes}`, 20, y, { maxWidth: 170 });
+    y += 15;
+  }
+
+  // ---- Day-by-Day Notes & Images ----
+  if (c.dailyNotes && c.dailyNotes.length) {
+    doc.setFontSize(13);
+    doc.text("Daily Progress Details:", 20, y);
+    y += 10;
+    doc.setFontSize(12);
+
+    const startDate = new Date(c.plantDate);
+
+    c.dailyNotes.forEach((note, i) => {
+      const dayDate = new Date(startDate.getTime() + i * 86400000);
+      const dateStr = dayDate.toLocaleDateString();
+
+      // Get images for this day
+      const dayImages = (c.images || []).filter(img => img.date === dateStr);
+      if (!note && !dayImages.length) return;
+
+      if (y > 270) { doc.addPage(); y = 20; }
+
+      // Day header
+      const dayTitle = `Day ${i + 1} (${dateStr}): ${note || "No note"}`;
+      doc.text(dayTitle, 20, y, { maxWidth: 170 });
+      y += 10;
+
+      // Images for the day
+      dayImages.forEach((img, k) => {
+        if (y > 200) { doc.addPage(); y = 20; }
+        try {
+          doc.addImage(img.src, "JPEG", 25, y, 45, 35);
+        } catch (err) {
+          console.error("Image add failed:", err);
+        }
+        const predMsg = img.pred || img.note || "Healthy Crop";
+        doc.text(`Image ${k + 1} – ${predMsg}`, 75, y + 20, { maxWidth: 110 });
+        y += 45;
+      });
+
+      y += 5; // space after each day
+    });
+  }
+
+  // ---- Save PDF ----
+  doc.save(`${c.name}_progress.pdf`);
+};
+
+
+
+renderCropList();
+
+// Weather
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude,longitude}=pos.coords;
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`)
+      .then(r=>r.json()).then(d=>{
+        weatherTemp.textContent=d.current_weather.temperature+" °C";
+        weatherCond.textContent="Wind "+d.current_weather.windspeed+" km/h";
+        weatherLoc.textContent=`Lat:${latitude.toFixed(2)}, Lon:${longitude.toFixed(2)}`;
+      }).catch(()=>weatherCond.textContent="Weather unavailable");
+  },()=>weatherCond.textContent="Location denied");
+}else weatherCond.textContent="No geolocation";
+
+// News
+fetch('https://gnews.io/api/v4/top-headlines?topic=nation&lang=en&token=6111a32f3f7df44274be299996f3c1bf')
+  .then(response => response.json())
+  .then(data => {
+    const inner = document.getElementById('newsInner');
+    inner.innerHTML = '';
+    (data.articles || []).slice(0, 5).forEach((article, i) => {
+      const img = article.image ? `<img src="${article.image}" class="news-img" alt="news">` : '';
+      const div = document.createElement('div');
+      div.className = 'carousel-item' + (i === 0 ? ' active' : '');
+      div.innerHTML = `${img}<strong>${article.title}</strong><br><small>${article.source?.name || ''}</small>`;
+      inner.appendChild(div);
+    });
+  })
+  .catch(() => {
+    const inner = document.getElementById('newsInner');
+    inner.innerHTML = '<div class="carousel-item active">News unavailable</div>';
+  });
+
+// === Schemes Modal ===
+document.getElementById('schemeBtn').onclick = () => {
+  new bootstrap.Modal('#schemeModal').show();
+};
+
+// === Language Switch (basic demo) ===
+// You can expand this with real translations.
+document.querySelectorAll('.lang-select').forEach(item=>{
+  item.addEventListener('click',()=>{
+    const code=item.dataset.lang;
+    const label=item.textContent;
+    document.getElementById('langBtn').innerHTML = "🌐 " + label;
+    localStorage.setItem('sca_lang',code);
+    alert("Language switched to: " + label + 
+          "\n(For full translation you can map text in JS).");
+  });
+});
+
+
+
+// Optional: Restore last chosen language on page load
+const savedLang = localStorage.getItem('sca_lang');
+if(savedLang){
+  const match = document.querySelector(`.lang-select[data-lang="${savedLang}"]`);
+  if(match) document.getElementById('langBtn').innerHTML = "🌐 " + match.textContent;
+}
+
+</script>
+</body>
+</html>
